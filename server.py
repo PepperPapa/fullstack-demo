@@ -1,69 +1,178 @@
-# python3.4
-# very simple socket server
-# just for verify how bowser can request an image file
-# and display normally
+# -*- coding: utf-8 -*- 
+#!/usr/bin/python3.5
+# win7环境
 
 """
-steps to test:
-1.download server.py and google.png to your local machine.
-2.cd to that directory same as server.py's.
-3.run command "python server.py"
-4.using the browser request url "http://127.0.0.1:8008/google.png"
-5.google.png should be display normally.
-"""
-import socket
+说明：该版本程序的目的是不适用任何任何外部python库的情况下实现nginx代理wsgi网关服务器
+，该版本目前仅能做到curl可以通过nginx服务器代理返回python脚本的返回信息，浏览器请求还
+会报错，解析请求信息部分的实现待完成。
 
-HOST = ""
-PORT = 8008
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((HOST, PORT))
-s.listen(1)
-conn, addr = s.accept()
-print("conn: ", conn)
-print("add: ", addr)
-print("\n\n==zx==\n\n")
-request = conn.recv(1024).decode("utf-8")
-print(request, type(request))
-print("\n\n==zx==\n\n")
-request = request.split("\r\n")
-rurl = request[0].split()[1]
-print(rurl)
-
-# response for url '/'
-response = """
-HTTP/1.1 200 OK
-Server: python socket
-Content-Type: text/html
-
-<html>
-  <head>
-    <title>hi</title>
-  </head>
-  <body>
-    <h1>Hello {0}</h1>
-  </body>
-</html>
-"""
-
-# response header for request url '/google.png'
-headers = """
-HTTP/1.1 200 OK
-Content-Type: image/png
-
-"""
-
-# read the image file, the open mode should be 'rb', must include 'b'
-f = open("google.png", 'rb')
-img_data = f.read()
-f.close()
-
-# process for url '/'
-if (rurl == "/"):
-    conn.sendall(response.format("index").encode("utf-8"))
-# process for url '/google.png'    
-if rurl == "/google.png":
-    conn.sendall(headers.encode("utf-8"))
-    # the type of img_data is 'bytes'
-    conn.sendall(img_data)
+nginx配置：
+http {
+  server {
+    listen 8000;
+    server_name test.com;
     
+    location / {
+      root html;
+      index index.html index.html;
+    }
+    
+    location /test {
+      root E:\my_project\fullstack-demo;
+      uwsgi_pass 127.0.0.1:8008;
+      include uwsgi_params;
+    }
+  }
+}
+
+测试步骤：
+1. cd到server.py所在的目录，执行命令
+   > python server.py app_demo:app_demo
+2. cd到nginx的安装目录，执行命令
+   > start nginx
+3. 执行curl http://127.0.0.1:8000/test，返回hello world。
+"""
+
+import socket
+import io
+import sys
+
+
+class WSGIServer(object):
+
+    address_family = socket.AF_INET
+    socket_type = socket.SOCK_STREAM
+    request_queue_size = 1
+
+    def __init__(self, server_address):
+        # Create a listening socket
+        self.listen_socket = listen_socket = socket.socket(
+            self.address_family,
+            self.socket_type
+        )
+        # Allow to reuse the same address
+        listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Bind
+        listen_socket.bind(server_address)
+        # Activate
+        listen_socket.listen(self.request_queue_size)
+        # Get server host name and port
+        host, port = self.listen_socket.getsockname()[:2]
+        self.server_name = socket.getfqdn(host)
+        self.server_port = port
+        # Return headers set by Web framework/Web application
+        self.headers_set = []
+
+    def set_app(self, application):
+        self.application = application
+
+    def serve_forever(self):
+        listen_socket = self.listen_socket
+        while True:
+            # New client connection
+            self.client_connection, client_address = listen_socket.accept()
+            # Handle one request and close the client connection. Then
+            # loop over to wait for another client connection
+            self.handle_one_request()
+
+    def handle_one_request(self):
+        self.request_data = request_data = self.client_connection.recv(1024).decode("utf-8")
+        # Print formatted request data a la 'curl -v'
+        print(''.join(
+            '< {line}\n'.format(line=line)
+            for line in request_data.splitlines()
+        ))
+
+        self.parse_request(request_data)
+
+        # Construct environment dictionary using request data
+        env = self.get_environ()
+
+        # It's time to call our application callable and get
+        # back a result that will become HTTP response body
+        result = self.application(env, self.start_response)
+
+        # Construct a response and send it back to the client
+        self.finish_response(result)
+
+    def parse_request(self, text):
+        request_line = text.splitlines()[0]
+        request_line = request_line.rstrip('\r\n')
+        # Break down the request line into components
+        """(self.request_method,  # GET
+         self.path,            # /hello
+         self.request_version  # HTTP/1.1
+         ) = request_line.split()"""
+
+    def get_environ(self):
+        env = {}
+        # The following code snippet does not follow PEP8 conventions
+        # but it's formatted the way it is for demonstration purposes
+        # to emphasize the required variables and their values
+        #
+        # Required WSGI variables
+        env['wsgi.version']      = (1, 0)
+        env['wsgi.url_scheme']   = 'http'
+        env['wsgi.input']        = io.StringIO(self.request_data)
+        env['wsgi.errors']       = sys.stderr
+        env['wsgi.multithread']  = False
+        env['wsgi.multiprocess'] = False
+        env['wsgi.run_once']     = False
+        # Required CGI variables
+        #env['REQUEST_METHOD']    = self.request_method    # GET
+        #env['PATH_INFO']         = self.path              # /hello
+        env['SERVER_NAME']       = self.server_name       # localhost
+        env['SERVER_PORT']       = str(self.server_port)  # 8888
+        return env
+
+    def start_response(self, status, response_headers, exc_info=None):
+        # Add necessary server headers
+        server_headers = [
+            ('Date', 'Tue, 31 Mar 2015 12:54:48 GMT'),
+            ('Server', 'WSGIServer 0.2'),
+        ]
+        self.headers_set = [status, response_headers + server_headers]
+        # To adhere to WSGI specification the start_response must return
+        # a 'write' callable. We simplicity's sake we'll ignore that detail
+        # for now.
+        # return self.finish_response
+
+    def finish_response(self, result):
+        try:
+            status, response_headers = self.headers_set
+            response = 'HTTP/1.1 {status}\r\n'.format(status=status)
+            for header in response_headers:
+                response += '{0}: {1}\r\n'.format(*header)
+            response += '\r\n'
+            for data in result:
+                response += data
+            # Print formatted response data a la 'curl -v'
+            print(''.join(
+                '> {line}\n'.format(line=line)
+                for line in response.splitlines()
+            ))
+            self.client_connection.sendall(response.encode("utf-8"))
+        finally:
+            self.client_connection.close()
+
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8008
+
+
+def make_server(server_address, application):
+    server = WSGIServer(server_address)
+    server.set_app(application)
+    return server
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        sys.exit('Provide a WSGI application object as module:callable')
+    app_path = sys.argv[1]
+    module, application = app_path.split(':')
+    module = __import__(module)
+    application = getattr(module, application)
+    httpd = make_server(SERVER_ADDRESS, application)
+    print('WSGIServer: Serving HTTP on port {port} ...\n'.format(port=PORT))
+    httpd.serve_forever()
