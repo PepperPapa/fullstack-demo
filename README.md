@@ -49,7 +49,8 @@
    Commercial support is available at nginx.com.
    Thank you for using nginx.
  ```
-7. 浏览器打开http://127.0.0.1:8000/test.py（或者cmd下执行curl http://127.0.0.1:8000/test.py），应显示hello, world, 表示代理python server返回成功。
+7. 浏览器打开http://127.0.0.1:8000/test.py（或者cmd下执行curl http://127.0.0.1:8000/test.py），应显示hello, world, 表示代理python server返回成功。 
+
  ```
  hello world
  ```
