@@ -2,6 +2,7 @@
 > 该示例主要目的是实现nginx代理静态文件，python server执行python脚本处理客户端的动态数据请求，nginx代理python server。
 > 为了尽量使用python原生的库，本示例使用的是nginx的http代理方式，未使用fastcgi、uwsgi等代理方式，python wsgi接口的相关配置
 > 本示例目前实现还比较简单，持续更新中...
+
 1. 操作系统环境
    windows7
 2. python版本
