@@ -10,6 +10,7 @@
     python3.5
 3. nginx配置
    配置文件在项目根目录，在nginx安装目录下的conf文件夹中引入该配置文件，配置如下：
+
    ```
    events {
     worker_connections  1024;
@@ -20,6 +21,7 @@
    ```
 4. cd到nginx的安装目录，执行启动nginx命令： start nginx。
 5. cd到server.py文件的目录，执行命令：python server.py，输出信息如下：
+
  ```
    E:\my_project\fullstack-demo>python server.py
    Serving HTTP on port 8000...

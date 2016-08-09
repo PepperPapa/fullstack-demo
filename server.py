@@ -17,7 +17,7 @@ def app_demo(environ, start_response):
 """
 
 httpd = make_server('', 8008, app_demo)
-print("Serving HTTP on port 8000...")
+print("Serving HTTP on port 8008...")
 
 # Respond to requests until process is killed
 httpd.serve_forever()
