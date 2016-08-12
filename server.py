@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*- 
 #!/usr/bin/python3.5
-# win7环境
+# win7环境 
 
 from wsgiref.simple_server import make_server
 from cgi_bin.app import app_demo

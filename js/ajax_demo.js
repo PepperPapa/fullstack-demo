@@ -11,6 +11,9 @@ var res_demo3 = document.querySelector(".demo3");
 var el_demo4 = document.getElementById("demo4");
 var res_demo4 = document.querySelector(".demo4");
 
+var el_demo5 = document.getElementById("demo5");
+var res_demo5 = document.querySelector(".demo5");
+
 var xhq = new XMLHttpRequest();
 
 function handleMessage() {
@@ -75,7 +78,23 @@ function handleRedirect() {
 
 el_demo4.addEventListener("click", function() {
   xhq.onreadystatechange = handleRedirect;
-  xhq.open("GET", "/zxredirect.py", true);
+  xhq.open("GET", "/redirect.py", true);
   xhq.send();
   console.log("redirect...");
+});
+
+function handleCookie() {
+  if (xhq.readyState === 4) {
+    if (xhq.status === 200) {
+      //document.cookie = xhq.getResponseHeader("Set-Cookie");
+      res_demo5.innerText = document.cookie;
+    }
+  }
+}
+
+el_demo5.addEventListener("click", function() {
+  xhq.onreadystatechange = handleCookie;
+  xhq.open("GET", "/cookie.py", true);
+  xhq.send();
+  console.log("reading cookie...");
 });
