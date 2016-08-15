@@ -16,7 +16,7 @@ def app_demo(environ, start_response):
         body = ""
     elif url == "/cookie.py":
         start_response("200 OK", [("Content-Type", "text/plain;charset=utf-8"),
-                                                        ("Set-Cookie", "name=pepperpapa; domain=127.0.0.1; Expires=Sun, 14-Aug-16 00:00:00 GMT")])
+                                                        ("Set-Cookie", "name=pepperpapa; domain=127.0.0.1; Expires=Sun, 14-Dec-16 00:00:00 GMT")])
         body = ""
     else:
         body = "404 not found!"
